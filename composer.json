@@ -1,0 +1,59 @@
+{
+  "name": "lustrace/ares2-client",
+  "description": "ARES2 REST API client (CZ) using PSR-18 + PSR-17. Framework-agnostic, with optional cache + rate limiting.",
+  "type": "library",
+  "license": "MIT",
+  "keywords": [
+    "ares",
+    "ares2",
+    "czech",
+    "registry",
+    "mfcr",
+    "client",
+    "psr-18"
+  ],
+  "authors": [
+    {
+      "name": "Lustrace",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "php": "^8.1",
+    "ext-json": "*",
+    "psr/http-client": "^1.0",
+    "psr/http-message": "^1.1 || ^2.0",
+    "psr/http-factory": "^1.0",
+    "psr/simple-cache": "^1.0 || ^2.0 || ^3.0",
+    "psr/log": "^1.1 || ^2.0 || ^3.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^10.5",
+    "phpstan/phpstan": "^1.11",
+    "friendsofphp/php-cs-fixer": "^3.60"
+  },
+  "autoload": {
+    "psr-4": {
+      "Lustrace\\Ares2\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Lustrace\\Ares2\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "phpunit",
+    "stan": "phpstan analyse -c phpstan.neon",
+    "cs:fix": "php-cs-fixer fix -v",
+    "ci": [
+      "@stan",
+      "@test"
+    ]
+  },
+  "config": {
+    "sort-packages": true
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}

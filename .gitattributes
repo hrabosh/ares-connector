@@ -1,0 +1,6 @@
+* text=auto eol=lf
+/.github export-ignore
+/tests export-ignore
+phpstan.neon export-ignore
+phpunit.xml.dist export-ignore
+.editorconfig export-ignore
