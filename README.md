@@ -1,10 +1,11 @@
 # lustrace/ares2-client
 
-A small, framework-agnostic **ARES2** (CZ) REST API client built on **PSR-18** (HTTP client) + **PSR-17** (message factories).
+A professional, framework-agnostic **ARES2** (CZ) REST API client built on **PSR-18** (HTTP client) + **PSR-17** (message factories).
 
 - Optional **PSR-16 cache** for GET endpoints
 - Optional **rate limiter** (simple in-memory fixed window) to avoid bursts
 - Clean exceptions for transport vs API errors
+- **DDD-friendly abstractions** usable in plain PHP and Symfony applications
 
 ## Install
 
@@ -18,7 +19,7 @@ You must also install a PSR-18 client + PSR-17 factories, e.g. Symfony HttpClien
 composer require symfony/http-client symfony/psr-http-message-bridge nyholm/psr7
 ```
 
-## Quick start
+## Low-level client (raw ARES payloads)
 
 ```php
 use Lustrace\Ares2\AresClient;
@@ -49,6 +50,47 @@ $req = new SearchRequest(
     pagination: new Pagination(start: 0, count: 10),
 );
 $res = $ares->searchEconomicSubjects($req);
+```
+
+## DDD-oriented API (typed domain objects)
+
+```php
+use Lustrace\Ares2\Application\EconomicSubjectService;
+use Lustrace\Ares2\DTO\Pagination;
+use Lustrace\Ares2\Infrastructure\Ares\AresEconomicSubjectRepository;
+
+$repository = new AresEconomicSubjectRepository($ares);
+$service = new EconomicSubjectService($repository);
+
+$subject = $service->getByIco('00006947');
+$searchResult = $service->search(['obchodniJmeno' => 'Ministerstvo'], new Pagination(0, 20));
+
+foreach ($searchResult->items as $item) {
+    echo (string) $item->ico . ' ' . ($item->name ?? '') . PHP_EOL;
+}
+```
+
+## Symfony usage
+
+Because all abstractions are interfaces + immutable value objects, the library is easy to wire in Symfony services:
+
+```yaml
+# config/services.yaml
+services:
+  Lustrace\Ares2\AresClient:
+    arguments:
+      $httpClient: '@psr18.http_client'
+      $requestFactory: '@nyholm.psr7.psr17_factory'
+      $streamFactory: '@nyholm.psr7.psr17_factory'
+
+  Lustrace\Ares2\Domain\Repository\EconomicSubjectRepositoryInterface:
+    class: Lustrace\Ares2\Infrastructure\Ares\AresEconomicSubjectRepository
+    arguments:
+      $client: '@Lustrace\Ares2\AresClient'
+
+  Lustrace\Ares2\Application\EconomicSubjectService:
+    arguments:
+      $repository: '@Lustrace\Ares2\Domain\Repository\EconomicSubjectRepositoryInterface'
 ```
 
 ## Endpoints / paths
