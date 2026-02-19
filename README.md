@@ -115,3 +115,96 @@ $ares = new AresClient(..., baseUri: 'https://ares.gov.cz/ekonomicke-subjekty-v-
 ## License
 
 MIT
+
+
+## Lustration (multi-source, "all relevant data")
+
+For a lustration / due-diligence workflow you typically:
+
+1) Resolve the target IČO (directly or via CORE search by `obchodniJmeno`)
+2) Fetch subject detail from CORE and all relevant datasets (`RES`, `VR`, `RZP`, ...)
+
+This package includes a small orchestrator that does exactly that:
+
+```php
+use Lustrace\Ares2\Application\AresLustrationService;
+use Lustrace\Ares2\DTO\Lustration\LustrationOptions;
+use Lustrace\Ares2\DTO\Lustration\LustrationQuery;
+
+$lustration = new AresLustrationService($client);
+
+$result = $lustration->run(
+    LustrationQuery::forCompanyName('Ministerstvo financí'),
+    new LustrationOptions(
+        maxTargets: 5,
+        relevantSourcesOnly: true, // uses CORE->seznamRegistraci to avoid needless 404s
+    )
+);
+
+foreach ($result->subjects as $subject) {
+    echo $subject->ico . PHP_EOL;
+    foreach ($subject->bySource as $sourceKey => $sourceResult) {
+        echo " - {$sourceKey}: {$sourceResult->status->value}" . PHP_EOL;
+    }
+}
+```
+
+### Person name search – important limitation
+
+ARES CORE filter officially supports searching by **obchodní jméno** and some other company attributes.
+It does **not** provide a public "person to companies" search across statutory bodies.
+
+So `LustrationQuery::forPersonName()` is implemented as a *best-effort OSVČ / name-as-trade-name* lookup:
+it tries a few `obchodniJmeno` variants like `"Jan Novák"`, `"Novák Jan"`, `"Novák, Jan"` and then proceeds with the same multi-source fetch.
+
+If you need **true** person-to-company linking (statutory bodies across companies), you will need another legally available source (e.g. licensed commercial registry data) and treat ARES as a data enrichment layer.
+
+## Resilience: retries + client-side load balancing
+
+ARES can rate-limit (429) or sporadically fail (5xx). The client supports:
+
+- Exponential backoff retries for 429/5xx (configurable)
+- Round-robin base URI selection + short cooldown on failed endpoints
+
+```php
+use Lustrace\Ares2\Infrastructure\Http\RetryPolicy;
+
+$client = new AresClient(
+    httpClient: $httpClient,
+    requestFactory: $requestFactory,
+    streamFactory: $streamFactory,
+    baseUri: 'https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/',
+    baseUris: [
+        'https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/', // add more if you have them (proxy layer, mirrors, ...)
+    ],
+    retryPolicy: new RetryPolicy(maxRetries: 2),
+    defaultHeaders: [
+        'User-Agent' => 'lustrace/1.0 (+https://your-domain.example)',
+        // 'Authorization' => 'Bearer ...', // if your integration requires credentials
+    ],
+);
+```
+
+
+
+## Symfony integration
+
+You can wire it using Symfony HttpClient (PSR-18) + Nyholm PSR-17 factory:
+
+```php
+// services.yaml (example)
+services:
+  Nyholm\Psr7\Factory\Psr17Factory: ~
+
+  Lustrace\Ares2\AresClient:
+    arguments:
+      $httpClient: '@Psr\Http\Client\ClientInterface'
+      $requestFactory: '@Nyholm\Psr7\Factory\Psr17Factory'
+      $streamFactory: '@Nyholm\Psr7\Factory\Psr17Factory'
+      $baseUri: '%env(ARES_BASE_URI)%'
+      $defaultHeaders:
+        User-Agent: 'lustrace/1.0'
+```
+
+Then inject `AresClient` or `AresLustrationService` into your Messenger handlers.
+

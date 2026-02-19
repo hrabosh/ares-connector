@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Lustrace\Ares2\Domain\Entity;
 
 use Lustrace\Ares2\Domain\ValueObject\Ico;
+use Lustrace\Ares2\Domain\ValueObject\IcoNormalizer;
 
 final readonly class EconomicSubject
 {
@@ -22,9 +23,22 @@ final readonly class EconomicSubject
      */
     public static function fromAresData(array $data): self
     {
-        $icoValue = isset($data['ico']) ? (string) $data['ico'] : '';
-        $name = null;
+        $icoValue = '';
 
+        if (isset($data['ico']) && (is_string($data['ico']) || is_int($data['ico']))) {
+            $icoValue = (string) $data['ico'];
+        } elseif (isset($data['icoId'])) {
+            // some ARES responses use icoId as an identifier
+            if (is_string($data['icoId']) || is_int($data['icoId'])) {
+                $icoValue = (string) $data['icoId'];
+            } elseif (is_array($data['icoId']) && isset($data['icoId']['ico'])) {
+                $icoValue = (string) $data['icoId']['ico'];
+            }
+        }
+
+        $icoValue = IcoNormalizer::normalize($icoValue);
+
+        $name = null;
         foreach (['obchodniJmeno', 'nazev', 'jmeno'] as $key) {
             if (isset($data[$key]) && is_string($data[$key]) && $data[$key] !== '') {
                 $name = $data[$key];
