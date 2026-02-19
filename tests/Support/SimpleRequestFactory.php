@@ -36,7 +36,12 @@ final class SimpleRequest implements RequestInterface
     public function hasHeader($name): bool { return isset($this->headers[$name]); }
     public function getHeader($name): array { return $this->headers[$name] ?? []; }
     public function getHeaderLine($name): string { return implode(',', $this->getHeader($name)); }
-    public function withHeader($name, $value): RequestInterface { throw new \BadMethodCallException(); }
+    public function withHeader($name, $value): RequestInterface
+    {
+        $vals = is_array($value) ? array_map('strval', $value) : [strval($value)];
+        $this->headers[$name] = $vals;
+        return $this;
+    }
     public function withAddedHeader($name, $value): RequestInterface
     {
         $vals = is_array($value) ? array_map('strval', $value) : [strval($value)];
