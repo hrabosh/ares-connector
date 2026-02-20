@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Lustrace\Ares2\Tests\Support;
 
-use Psr\Http\Factory\StreamFactoryInterface;
+use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Message\StreamInterface;
 
 final class SimpleStreamFactory implements StreamFactoryInterface

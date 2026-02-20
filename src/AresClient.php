@@ -17,14 +17,17 @@ use Lustrace\Ares2\RateLimit\RateLimiterInterface;
 use Lustrace\Ares2\RateLimit\RateLimitExceededException;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface as HttpClientInterface;
-use Psr\Http\Factory\RequestFactoryInterface;
-use Psr\Http\Factory\StreamFactoryInterface;
+use Psr\Http\Message\RequestFactoryInterface;
+use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Psr\SimpleCache\CacheInterface;
 
 final class AresClient
 {
+    private EndpointPool $endpointPool;
+    private LoggerInterface|NullLogger $logger;
+
     /**
      * @param array<string,string> $defaultHeaders
      * @param list<string> $baseUris
@@ -49,9 +52,6 @@ final class AresClient
 
         $uris = $this->baseUris !== [] ? $this->baseUris : [$this->baseUri];
         $this->endpointPool = new EndpointPool($uris);
-
-        $this->retryPolicy = $retryPolicy ?? new RetryPolicy();
-        $this->sleeper = $sleeper ?? new NativeSleeper();
     }
 
     /**
