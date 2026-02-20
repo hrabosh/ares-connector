@@ -54,11 +54,6 @@ final class AresClient
         $this->sleeper = $sleeper ?? new NativeSleeper();
     }
 
-    private LoggerInterface $logger;
-    private EndpointPool $endpointPool;
-    private RetryPolicy $retryPolicy;
-    private SleeperInterface $sleeper;
-
     /**
      * Fetch subject detail from the default (CORE) endpoint.
      *
